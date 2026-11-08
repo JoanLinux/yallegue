@@ -1,0 +1,6 @@
+flask>=3.0
+insightface>=0.7
+onnxruntime>=1.17
+opencv-python>=4.9
+numpy>=1.24
+werkzeug>=3.0

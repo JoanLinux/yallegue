@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>YaLlegué — Pantalla</title>
+<style>
+  :root { color-scheme: dark; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden;
+               background: #060a10; color: #fff;
+               font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* ── IDLE ── */
+  #idle {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 32px;
+  }
+  .idle-icon { font-size: 96px; opacity: .12; }
+  .idle-title {
+    font-size: 28px; font-weight: 300; letter-spacing: .2em;
+    text-transform: uppercase; color: #ffffff22;
+  }
+  .idle-clock {
+    font-size: 72px; font-weight: 100; letter-spacing: .05em;
+    color: #ffffff18; font-variant-numeric: tabular-nums;
+  }
+  .idle-date { font-size: 16px; color: #ffffff14; letter-spacing: .12em; }
+
+  /* ── DETECTION ── */
+  #detect {
+    width: 100%; height: 100%; display: none;
+    animation: popIn .35s cubic-bezier(.23,1,.32,1);
+  }
+  @keyframes popIn {
+    from { opacity:0; transform:scale(.96) }
+    to   { opacity:1; transform:scale(1) }
+  }
+
+  .det-layout { width: 100%; height: 100%; display: flex; }
+
+  /* left: face photo */
+  .det-photo-wrap {
+    flex: 1; position: relative; overflow: hidden;
+    background: linear-gradient(135deg,#0d1520,#0a1018);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .det-photo-bg {
+    position: absolute; inset: -20px;
+    background-size: cover; background-position: center;
+    filter: blur(40px) brightness(.3) saturate(1.5);
+  }
+  #person-photo {
+    position: relative; z-index: 1;
+    width: 320px; height: 320px; border-radius: 50%;
+    object-fit: cover;
+    border: 6px solid rgba(255,255,255,.12);
+    box-shadow: 0 0 80px rgba(99,179,237,.2);
+  }
+  .no-photo {
+    position: relative; z-index: 1;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: #1a2535;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 100px; opacity: .4;
+  }
+
+  /* right: info panel */
+  .info-panel {
+    width: 460px; flex-shrink: 0;
+    background: linear-gradient(180deg,#0d1520,#091018);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 48px 44px; gap: 24px;
+    border-left: 1px solid #fff1;
+  }
+
+  .detected-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: #63b3ed; opacity: .8;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .detected-label::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: #63b3ed;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  .person-name {
+    font-size: 48px; font-weight: 900; line-height: 1.05;
+    color: #fff; letter-spacing: -.01em;
+  }
+  .person-role {
+    font-size: 16px; color: #ffffff55; font-weight: 400;
+    text-transform: uppercase; letter-spacing: .1em;
+  }
+
+  .divider { width: 56px; height: 3px; background: #63b3ed; border-radius: 2px; opacity: .7; }
+
+  .time-block { display: flex; flex-direction: column; gap: 4px; }
+  .time-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .15em;
+    text-transform: uppercase; color: #ffffff33;
+  }
+  .time-value {
+    font-size: 36px; font-weight: 300; color: #fff;
+    letter-spacing: .05em; font-variant-numeric: tabular-nums;
+  }
+  .date-value { font-size: 14px; color: #ffffff44; }
+
+  .cta-box {
+    background: linear-gradient(135deg,#1a4a6e,#0d2a42);
+    border: 1px solid #63b3ed33;
+    border-radius: 12px; padding: 16px 20px;
+    font-size: 18px; font-weight: 700; color: #63b3ed;
+    text-align: center; letter-spacing: .03em;
+  }
+
+  /* demo badge */
+  #demo-badge {
+    position: absolute; top: 20px; left: 20px; z-index: 100;
+    background: #63b3ed22; border: 1px solid #63b3ed55;
+    color: #63b3ed; font-size: 11px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 20px;
+    display: none; align-items: center; gap: 6px;
+    backdrop-filter: blur(4px);
+  }
+  #demo-badge .dot-pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #63b3ed;
+    animation: blink 1.4s ease-in-out infinite;
+  }
+
+  /* access denied overlay — anchored to bottom of detect panel */
+  #denied-overlay {
+    position: absolute; bottom: 32px; left: 0; right: 0; z-index: 10;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .denied-box {
+    display: flex; flex-direction: row; align-items: center; gap: 12px;
+    background: linear-gradient(135deg,#2a0505cc,#0d0202cc);
+    border: 1.5px solid #fc818155; border-radius: 14px;
+    padding: 12px 22px; text-align: left;
+    box-shadow: 0 4px 32px #fc818122;
+    backdrop-filter: blur(8px);
+    animation: popIn .35s cubic-bezier(.23,1,.32,1);
+  }
+  .denied-icon {
+    font-size: 28px; line-height: 1; flex-shrink: 0;
+  }
+  .denied-title {
+    font-size: 18px; font-weight: 900; color: #fc8181;
+    letter-spacing: .05em; text-transform: uppercase;
+  }
+  .denied-name {
+    font-size: 14px; font-weight: 600; color: #fff; opacity: .75;
+  }
+  .denied-sub {
+    font-size: 11px; color: #fc818166; letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .progress-bar { display: none; }
+
+  /* access log panel — bottom right, stacks vertically */
+  #log-strip {
+    position: fixed; bottom: 20px; right: 24px;
+    display: flex; flex-direction: column-reverse; gap: 6px;
+    align-items: flex-end; pointer-events: none;
+  }
+  .log-entry {
+    display: flex; align-items: center; gap: 10px;
+    background: #0a0f18cc; border: 1px solid #fff1;
+    border-radius: 10px; padding: 7px 14px;
+    font-size: 13px; color: #ffffff88; white-space: nowrap;
+    backdrop-filter: blur(6px);
+    animation: slideIn .3s ease-out;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  .log-entry strong { color: #fff; font-weight: 600; }
+  .log-entry .log-time { color: #63b3ed; font-size: 11px; font-weight: 700; }
+
+  /* Ikusi logo watermark */
+  #ikusi-logo {
+    position: fixed; bottom: 20px; right: 24px; z-index: 9999;
+    opacity: .28; filter: brightness(0) invert(1);
+    height: 26px; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="idle">
+  <div class="idle-clock" id="idle-clock">00:00</div>
+  <div class="idle-date" id="idle-date"></div>
+  <div class="idle-icon">👁</div>
+  <div class="idle-title">Esperando llegada...</div>
+</div>
+
+<div id="detect">
+  <div id="demo-badge"><span class="dot-pulse"></span>Persona detectada</div>
+  <div class="det-layout">
+    <div class="det-photo-wrap">
+      <div class="det-photo-bg" id="photo-bg"></div>
+      <img id="person-photo" src="" alt="" style="display:none">
+      <div class="no-photo" id="no-photo">👤</div>
+    </div>
+    <div class="info-panel">
+      <div class="detected-label" id="det-label">Ya llegó</div>
+      <div class="person-name" id="person-name">—</div>
+      <div class="person-role" id="person-role"></div>
+      <div class="divider" id="det-divider"></div>
+      <div class="time-block">
+        <div class="time-label" id="time-label">Hora de entrada</div>
+        <div class="time-value" id="entry-time">—</div>
+        <div class="date-value" id="entry-date"></div>
+      </div>
+      <div class="cta-box" id="cta-box">✅ Asistencia registrada</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <div id="denied-overlay">
+    <div class="denied-box">
+      <div class="denied-icon">🚫</div>
+      <div>
+        <div class="denied-title">Acceso denegado</div>
+        <div class="denied-name" id="denied-name">—</div>
+        <div class="denied-sub" id="denied-role"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="log-strip"></div>
+<img id="ikusi-logo" src="https://www.ikusi.com/wp-content/themes/ikusi/images/logo-ikusi.svg"
+     onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Ikusi_Logo.svg/320px-Ikusi_Logo.svg.png'"
+     alt="Ikusi">
+
+<script>
+  let lastDetectedAt  = null;
+  let lastActivityMs  = 0;        // ms timestamp of last real detection
+  const IDLE_TIMEOUT  = 5 * 60 * 1000; // 5 min of no detections → screensaver
+  const _shownEvents  = new Set(); // "pid:type" — never show same event twice
+
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("idle-clock").textContent =
+      now.toLocaleTimeString("es-MX", {hour:"2-digit", minute:"2-digit"});
+    document.getElementById("idle-date").textContent =
+      now.toLocaleDateString("es-MX", {weekday:"long", day:"numeric", month:"long", year:"numeric"});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  async function poll() {
+    try {
+      const d = await (await fetch("/status")).json();
+      const c = d.current;
+      const camType = d.cam_type || 'entrada';
+      if (c && c.access_denied) {
+        const deniedKey = `denied:${c.person_id}:${c.detected_at}`;
+        if (deniedKey !== lastDetectedAt) {
+          lastDetectedAt = deniedKey;
+          lastActivityMs = Date.now();
+          showDenied(c);
+        }
+      } else if (c) {
+        const eventKey = `${c.person_id}:${camType}:${c.detected_at}`;
+        if (eventKey !== lastDetectedAt && !_shownEvents.has(`${c.person_id}:${camType}`)) {
+          lastDetectedAt = eventKey;
+          lastActivityMs = Date.now();
+          const opposite = camType === 'entrada' ? 'salida' : 'entrada';
+          _shownEvents.delete(`${c.person_id}:${opposite}`);
+          _shownEvents.add(`${c.person_id}:${camType}`);
+          hideDenied();
+          showDetection(c, camType);
+          addLogEntry(c, camType);
+        }
+      } else {
+        // no current detection — only go idle after IDLE_TIMEOUT with no activity
+        if (lastActivityMs > 0 && Date.now() - lastActivityMs > IDLE_TIMEOUT) {
+          hideDetection();
+          hideDenied();
+        }
+        // if lastActivityMs===0 (fresh load, never detected anyone) stay at idle naturally
+      }
+    } catch(e) {}
+    setTimeout(poll, 1000);
+  }
+
+  function showDenied(c) {
+    document.getElementById('denied-name').textContent = c.name || '—';
+    document.getElementById('denied-role').textContent = c.role || '';
+    // show detect div (for photo bg) but overlay denial
+    const photo = document.getElementById("person-photo");
+    const nophoto = document.getElementById("no-photo");
+    const bg = document.getElementById("photo-bg");
+    if (c.face_path) {
+      const src = "/uploads/faces/" + encodeURIComponent(c.face_path);
+      photo.src = src; photo.style.display = "block"; nophoto.style.display = "none";
+      bg.style.backgroundImage = `url('${src}')`;
+    } else {
+      photo.style.display = "none"; nophoto.style.display = "flex";
+      bg.style.backgroundImage = "";
+    }
+    document.getElementById("idle").style.display        = "none";
+    document.getElementById("detect").style.display       = "block";
+    document.getElementById("denied-overlay").style.display = "flex";
+    document.getElementById("demo-badge").style.display   = "none";
+    document.querySelector(".info-panel").style.display   = "none";
+  }
+
+  function hideDenied() {
+    document.getElementById("denied-overlay").style.display = "none";
+    document.querySelector(".info-panel").style.display   = "";
+  }
+
+  function showDetection(c, camType) {
+    const isSalida = camType === 'salida';
+    const accent   = isSalida ? '#fc8181' : '#63b3ed';
+    // update theme colors
+    document.documentElement.style.setProperty('--det-accent', accent);
+    document.getElementById('det-label').textContent   = isSalida ? 'Salió' : 'Ya llegó';
+    document.getElementById('det-label').style.color   = accent;
+    document.getElementById('det-divider').style.background = accent;
+    document.getElementById('time-label').textContent  = isSalida ? 'Hora de salida' : 'Hora de entrada';
+    document.getElementById('cta-box').innerHTML       = isSalida ? '🚪 Salida registrada' : '✅ Asistencia registrada';
+    document.getElementById('cta-box').style.background   = isSalida
+      ? 'linear-gradient(135deg,#4a1a1a,#2a0d0d)' : 'linear-gradient(135deg,#1a4a6e,#0d2a42)';
+    document.getElementById('cta-box').style.borderColor  = isSalida ? '#fc818133' : '#63b3ed33';
+    document.getElementById('cta-box').style.color        = accent;
+    document.getElementById("person-name").textContent = c.name || "—";
+    document.getElementById("person-role").textContent = c.role || "";
+
+    const ts = new Date(c.timestamp);
+    document.getElementById("entry-time").textContent =
+      ts.toLocaleTimeString("es-MX", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    document.getElementById("entry-date").textContent =
+      ts.toLocaleDateString("es-MX", {weekday:"long", day:"numeric", month:"long"});
+
+    const photo = document.getElementById("person-photo");
+    const nophoto = document.getElementById("no-photo");
+    const bg = document.getElementById("photo-bg");
+    if (c.face_path) {
+      const src = "/uploads/faces/" + encodeURIComponent(c.face_path);
+      photo.src = src;
+      photo.style.display = "block";
+      nophoto.style.display = "none";
+      bg.style.backgroundImage = `url('${src}')`;
+    } else {
+      photo.style.display = "none";
+      nophoto.style.display = "flex";
+      bg.style.backgroundImage = "";
+    }
+
+    const bar = document.getElementById("progress");
+    bar.style.animation = "none"; bar.offsetHeight;
+    bar.style.animation = "shrink 8s linear forwards";
+
+    document.getElementById("idle").style.display = "none";
+    document.getElementById("detect").style.display = "block";
+    document.getElementById("demo-badge").style.display = "flex";
+  }
+
+  function hideDetection() {
+    if (document.getElementById("detect").style.display !== "none") {
+      document.getElementById("detect").style.display = "none";
+      document.getElementById("demo-badge").style.display = "none";
+      document.getElementById("denied-overlay").style.display = "none";
+      document.getElementById("idle").style.display = "flex";
+    }
+  }
+
+  function addLogEntry(person, camType) {
+    const strip = document.getElementById("log-strip");
+    while (strip.children.length >= 3) strip.removeChild(strip.lastChild);
+    const t    = new Date(person.timestamp).toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+    const icon = camType === 'salida' ? '🚪' : '✅';
+    const el   = document.createElement("div");
+    el.className = "log-entry";
+    el.innerHTML = `<span>${icon}</span><strong>${person.name}</strong>
+      ${person.role ? `<span style="color:#ffffff44">${person.role}</span>` : ""}
+      <span class="log-time">${t}</span>`;
+    strip.insertBefore(el, strip.firstChild);
+  }
+
+  async function loadLogStrip() {
+    const rows = await fetch("/api/attendance").then(r=>r.json()).catch(()=>[]);
+    const strip = document.getElementById("log-strip");
+    strip.innerHTML = "";
+    // show last 3, oldest first so newest ends up on top via column-reverse
+    rows.slice(0, 3).forEach(r => {
+      const t = new Date(r.timestamp).toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      const el = document.createElement("div");
+      el.className = "log-entry";
+      el.innerHTML = `<strong>${r.name}</strong>
+        ${r.role ? `<span style="color:#ffffff44">${r.role}</span>` : ""}
+        <span class="log-time">${t}</span>`;
+      strip.appendChild(el);
+    });
+  }
+
+  loadLogStrip();
+  poll();
+</script>
+</body>
+</html>

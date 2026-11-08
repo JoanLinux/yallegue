@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>YaLlegué — Admin</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg:#0d1117; --bg-card:#161b22; --border:#30363d;
+    --fg:#e6edf3; --fg-muted:#8b949e; --accent:#63b3ed;
+    --green:#3fb950; --red:#f85149;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--fg);
+            font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  a{color:var(--accent);text-decoration:none}
+
+  .layout{display:flex;height:100vh}
+  .sidebar{width:220px;flex-shrink:0;background:var(--bg-card);
+           border-right:1px solid var(--border);
+           display:flex;flex-direction:column;padding:20px 0}
+  .logo{padding:0 20px 20px;font-size:18px;font-weight:800;
+        border-bottom:1px solid var(--border);margin-bottom:16px}
+  .logo em{color:var(--accent);font-style:normal}
+  .tab{display:flex;align-items:center;gap:10px;padding:10px 20px;
+       cursor:pointer;color:var(--fg-muted);border-left:3px solid transparent;
+       transition:all .15s}
+  .tab:hover{color:var(--fg);background:#ffffff08}
+  .tab.active{color:var(--accent);border-left-color:var(--accent);background:#63b3ed11}
+
+  main{flex:1;overflow-y:auto;padding:24px}
+  .card{background:var(--bg-card);border:1px solid var(--border);
+        border-radius:10px;padding:16px;margin-bottom:16px}
+  .card-title{font-weight:700;font-size:13px;text-transform:uppercase;
+              letter-spacing:.08em;color:var(--fg-muted);margin-bottom:12px}
+  .field{margin-bottom:12px}
+  label{display:block;font-size:12px;color:var(--fg-muted);margin-bottom:4px}
+  input[type=text],input[type=date],input[type=time],select,textarea{
+    width:100%;padding:8px 10px;background:#0d1117;border:1px solid var(--border);
+    border-radius:6px;color:var(--fg);font-size:13px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  .btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border);
+       background:#21262d;color:var(--fg);cursor:pointer;font-size:13px}
+  .btn:hover{background:#30363d}
+  .btn-primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+  .btn-primary:hover{background:#90cdf4}
+  .btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+  .btn-full{width:100%}
+
+  /* status bar */
+  .status-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;
+              background:var(--bg-card);border:1px solid var(--border);
+              border-radius:10px;padding:12px 16px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#586069;flex-shrink:0}
+  .dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .status-text{font-size:12px;color:var(--fg-muted)}
+
+  /* persons table */
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+     color:var(--fg-muted);padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:8px;border-bottom:1px solid #21262d;vertical-align:middle}
+  td img{width:40px;height:40px;border-radius:50%;object-fit:cover}
+  tr:last-child td{border-bottom:none}
+
+  /* attendance grid */
+  .att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .att-card{background:#0d1117;border:1px solid var(--border);border-radius:8px;
+            padding:12px;display:flex;align-items:center;gap:10px}
+  .att-card img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  .att-card .avatar-ph{width:44px;height:44px;border-radius:50%;background:#1a2535;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:22px;flex-shrink:0}
+  .att-card .info strong{display:block;font-size:13px}
+  .att-card .info small{color:var(--fg-muted);font-size:11px}
+  .att-card .info .time{color:var(--accent);font-size:12px;font-weight:600}
+
+  /* summary badges */
+  .summary{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .badge{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;
+         padding:12px 20px;text-align:center;min-width:120px}
+  .badge .num{font-size:28px;font-weight:900;color:var(--accent)}
+  .badge .lbl{font-size:11px;color:var(--fg-muted);text-transform:uppercase;letter-spacing:.08em}
+
+  .msg-ok{color:var(--green);font-size:12px;margin-top:6px;display:none}
+  .msg-err{color:var(--red);font-size:12px;margin-top:6px;display:none}
+  .msg-ok.show,.msg-err.show{display:block}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="logo">Ya<em>Llegué</em> 👁</div>
+    <div class="tab active" onclick="showTab('camera')">📷 Cámara</div>
+    <div class="tab" onclick="showTab('persons')">👥 Personas</div>
+    <div class="tab" onclick="showTab('attendance')">📋 Asistencia hoy</div>
+    <div class="tab" onclick="showTab('history')">🗂 Historial</div>
+    <div style="flex:1"></div>
+    <div style="padding:16px 20px">
+      <a href="/pantalla" target="_blank" class="btn btn-primary btn-full" style="display:block;text-align:center">🖥 Ver pantalla</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ── CAMERA ── -->
+    <div id="tab-camera" style="display:flex;gap:16px;align-items:flex-start">
+
+      <!-- sidebar: source selector -->
+      <div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-title">Fuente de video</div>
+          <div class="field">
+            <label>Tipo</label>
+            <select id="src-type" onchange="updateSrcUI()" style="width:100%">
+              <option value="webcam">📷 Webcam local</option>
+              <option value="ip">🌐 Cámara IP (RTSP/HTTP)</option>
+              <option value="file">🎞 Video MP4 / AVI / MOV</option>
+              <option value="manual">⚙ Manual (OpenCV string)</option>
+            </select>
+          </div>
+          <!-- webcam -->
+          <div id="ui-webcam" class="field">
+            <label>Índice</label>
+            <select id="src-webcam" style="width:100%">
+              <option value="0">0 — principal</option>
+              <option value="1">1 — segunda</option>
+              <option value="2">2 — tercera</option>
+            </select>
+          </div>
+          <!-- ip cam -->
+          <div id="ui-ip" class="field" style="display:none">
+            <label>URL</label>
+            <input type="text" id="src-ip" placeholder="rtsp://user:pass@192.168.1.10:554/stream" style="width:100%">
+            <div style="font-size:11px;color:var(--fg-muted);margin-top:3px">RTSP · HTTP MJPEG · HLS</div>
+          </div>
+          <!-- file -->
+          <div id="ui-file" style="display:none">
+            <div class="field">
+              <label>Archivo de video</label>
+              <input type="file" id="src-file" accept="video/*,.mp4,.avi,.mov,.mkv" style="color:var(--fg-muted);font-size:12px" onchange="onVideoFile(this)">
+            </div>
+            <div id="src-file-name" style="font-size:11px;color:var(--fg-muted);margin-bottom:8px"></div>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--fg-muted)">
+              <input type="checkbox" id="src-loop" checked> Loop (repetir)
+            </label>
+          </div>
+          <!-- manual -->
+          <div id="ui-manual" class="field" style="display:none">
+            <label>Fuente (string OpenCV)</label>
+            <input type="text" id="src-manual" placeholder="0, /dev/video0, rtsp://..." style="width:100%">
+          </div>
+          <!-- entrada / salida toggle -->
+          <div style="display:flex;gap:6px;margin-top:12px">
+            <button id="cam-type-btn" onclick="toggleCamType()"
+              style="flex:1;padding:7px 10px;border-radius:8px;border:2px solid #2ea043;
+                     background:#0d2b14;color:#2ea043;font-weight:700;font-size:13px;
+                     cursor:pointer;transition:all .2s">
+              🟢 ENTRADA
+            </button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn btn-primary btn-full" id="btn-start" onclick="startCam()">▶ Iniciar</button>
+            <button class="btn btn-danger btn-full" id="btn-stop" onclick="stopCam()" style="display:none">■ Detener</button>
+          </div>
+        </div>
+
+        <!-- status card -->
+        <div class="card">
+          <div class="card-title">Estado</div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div class="dot" id="cam-dot"></div>
+            <span style="font-size:13px" id="cam-status">Detenida</span>
+            <span style="font-size:12px;color:var(--fg-muted)" id="cam-fps"></span>
+          </div>
+          <div id="det-info" style="font-size:12px;color:var(--fg-muted);line-height:1.5"></div>
+        </div>
+      </div>
+
+      <!-- preview -->
+      <div class="card" style="flex:1;min-width:0">
+        <div class="card-title">Preview</div>
+        <div style="background:#05060b;border-radius:8px;border:1px solid var(--border);
+                    overflow:hidden;min-height:200px;display:flex;align-items:center;justify-content:center">
+          <canvas id="cam-feed" style="width:100%;display:none;border-radius:8px"></canvas>
+          <div id="cam-placeholder" style="color:var(--fg-muted);font-size:12px;padding:40px;text-align:center">
+            📷 Inicia la cámara
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PERSONS ── -->
+    <div id="tab-persons" style="display:none">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Registrar persona</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field"><label>Nombre completo</label><input type="text" id="p-name" placeholder="Juan García"></div>
+          <div class="field"><label>Puesto / Área</label><input type="text" id="p-role" placeholder="Ventas, Cocina..."></div>
+        </div>
+        <div class="field">
+          <label>Foto de rostro (frontal, buena luz)</label>
+          <input type="file" id="p-face" accept="image/*" style="color:var(--fg-muted);font-size:12px" onchange="previewFace(this)">
+          <div id="face-preview-wrap" style="display:none;margin-top:10px">
+            <div style="position:relative;width:fit-content">
+              <img id="face-preview-img" style="max-height:180px;border-radius:8px;display:block">
+              <canvas id="face-preview-canvas" style="position:absolute;top:0;left:0;pointer-events:none"></canvas>
+            </div>
+            <div id="face-thumbs" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"></div>
+            <div id="face-preview-status" style="font-size:11px;color:var(--fg-muted);margin-top:6px"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="btn-add-person" onclick="addPerson()">➕ Registrar persona</button>
+        <div class="msg-ok" id="p-msg-ok">✓ Persona registrada</div>
+        <div class="msg-err" id="p-msg-err"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Personas registradas</div>
+        <table>
+          <thead><tr><th>Foto</th><th>Nombre</th><th>Puesto</th><th>Embedding</th><th></th></tr></thead>
+          <tbody id="persons-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ATTENDANCE ── -->
+    <div id="tab-attendance" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:14px;font-weight:700">Hoy — <span id="att-today-date"></span></span>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="loadAttendanceByPerson('today')">↻ Actualizar</button>
+      </div>
+
+      <!-- Currently inside panel -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          <span style="width:9px;height:9px;border-radius:50%;background:#3fb950;box-shadow:0 0 6px #3fb950;display:inline-block"></span>
+          Actualmente adentro
+          <span id="inside-count" style="margin-left:auto;background:#1a2535;border:1px solid #30363d;border-radius:12px;padding:1px 10px;font-size:12px;color:#63b3ed;font-weight:700"></span>
+        </div>
+        <div id="inside-grid" class="att-grid" style="margin-top:8px"></div>
+      </div>
+
+      <div class="summary" id="att-summary-today"></div>
+      <div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px;margin-top:4px">Registros de hoy</div>
+      <div class="att-grid" id="att-persons-today"></div>
+    </div>
+
+    <!-- ── HISTORY ── -->
+    <div id="tab-history" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <input type="text" id="hist-search" placeholder="🔍 Buscar persona..." style="width:200px" oninput="filterHistPersons()">
+        <input type="date" id="hist-date" style="width:160px" onchange="loadHistoryByPerson()">
+        <button class="btn btn-primary" onclick="loadHistoryByPerson()">Ver</button>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="loadHistoryByPerson()">↻ Actualizar</button>
+      </div>
+      <div class="summary" id="att-summary-hist"></div>
+      <div class="att-grid" id="att-persons-hist" style="margin-top:14px"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── ACCESS MODAL ── -->
+<div id="access-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:1000;
+     align-items:center;justify-content:center">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
+              padding:24px;width:380px;max-width:95vw;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      <img id="modal-photo" src="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;display:none">
+      <div id="modal-avatar" style="width:56px;height:56px;border-radius:50%;background:#1a2535;
+           display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>
+      <div style="flex:1">
+        <div id="modal-name" style="font-size:18px;font-weight:800"></div>
+        <div id="modal-role" style="font-size:12px;color:var(--fg-muted)"></div>
+        <div id="modal-total-time" style="display:none;align-items:center;gap:6px;margin-top:6px;
+             background:#0d2535;border:1px solid #63b3ed44;border-radius:8px;padding:5px 10px;width:fit-content">
+          <span style="font-size:12px;color:#ffffff66">⏱ Tiempo dentro</span>
+          <span id="modal-time-value" style="font-size:14px;font-weight:700;color:#63b3ed"></span>
+        </div>
+      </div>
+      <button onclick="closeModal()" style="margin-left:auto;background:none;border:none;
+              color:var(--fg-muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="modal-accesses"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" style="flex:1" onclick="manualAccess('entrada')">✅ Registrar entrada</button>
+      <button class="btn btn-danger"  style="flex:1" onclick="manualAccess('salida')">🚪 Registrar salida</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── UTILS ──────────────────────────────────────────────────────────────────
+  function showTab(name) {
+    document.getElementById('tab-camera').style.display    = name==='camera'     ? 'flex'  : 'none';
+    document.getElementById('tab-persons').style.display   = name==='persons'    ? 'block' : 'none';
+    document.getElementById('tab-attendance').style.display= name==='attendance' ? 'block' : 'none';
+    document.getElementById('tab-history').style.display   = name==='history'    ? 'block' : 'none';
+    document.querySelectorAll('.tab').forEach((el,i) => {
+      el.classList.toggle('active', ['camera','persons','attendance','history'][i]===name);
+    });
+    if (name==='persons')    loadPersons();
+    if (name==='attendance') loadAttendanceByPerson('today');
+    if (name==='history')    { const y=new Date(); y.setDate(y.getDate()-1); document.getElementById('hist-date').value=y.toISOString().slice(0,10); loadHistoryByPerson(); }
+  }
+
+  function showMsg(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── CAMERA ─────────────────────────────────────────────────────────────────
+  let _uploadedVideoPath = null;
+
+  function updateSrcUI() {
+    const t = document.getElementById('src-type').value;
+    document.getElementById('ui-webcam').style.display = t==='webcam' ? '' : 'none';
+    document.getElementById('ui-ip').style.display     = t==='ip'     ? '' : 'none';
+    document.getElementById('ui-file').style.display   = t==='file'   ? '' : 'none';
+    document.getElementById('ui-manual').style.display = t==='manual' ? '' : 'none';
+  }
+
+  async function onVideoFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('src-file-name').textContent = '⏳ Subiendo...';
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const r = await fetch('/upload_video', {method:'POST', body:form});
+      const d = await r.json();
+      if (d.path) {
+        _uploadedVideoPath = d.path;
+        document.getElementById('src-file-name').textContent = '✓ ' + file.name;
+      } else {
+        document.getElementById('src-file-name').textContent = '✗ Error al subir';
+      }
+    } catch(e) {
+      document.getElementById('src-file-name').textContent = '✗ ' + e.message;
+    }
+  }
+
+  function getSource() {
+    const t = document.getElementById('src-type').value;
+    if (t === 'webcam') return document.getElementById('src-webcam').value;
+    if (t === 'ip')     return document.getElementById('src-ip').value.trim();
+    if (t === 'file')   return _uploadedVideoPath || '';
+    if (t === 'manual') return document.getElementById('src-manual').value.trim() || '0';
+    return '0';
+  }
+
+  async function startCam() {
+    const src = getSource();
+    if (!src) { alert('Selecciona o ingresa una fuente de video'); return; }
+    const loop = document.getElementById('src-loop')?.checked ?? false;
+    _shownInEstado.clear();
+    document.getElementById('det-info').innerHTML = '';
+    await fetch('/start', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({source: src, loop, cam_type: _camType})});
+    document.getElementById('cam-feed').style.display = 'block';
+    document.getElementById('cam-placeholder').style.display = 'none';
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display = '';
+    startPolling();
+    startFrameLoop();
+  }
+
+  async function stopCam() {
+    await fetch('/stop', {method:'POST'});
+    stopFrameLoop();
+    document.getElementById('cam-feed').style.display = 'none';
+    document.getElementById('cam-placeholder').style.display = '';
+    document.getElementById('btn-start').style.display = '';
+    document.getElementById('btn-stop').style.display = 'none';
+    _shownInEstado.clear();
+    document.getElementById('det-info').innerHTML = '';
+  }
+
+  let _frameLoop = null;
+  let _frameBusy = false;
+  function startFrameLoop() {
+    if (_frameLoop) return;
+    const canvas = document.getElementById('cam-feed');
+    const ctx    = canvas.getContext('2d');
+    _frameLoop = setInterval(async () => {
+      if (_frameBusy) return;        // skip tick if previous fetch still in flight
+      _frameBusy = true;
+      try {
+        const resp = await fetch('/api/frame');
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const url  = URL.createObjectURL(blob);
+          const img  = new Image();
+          img.onload = () => {
+            if (canvas.width !== img.naturalWidth) canvas.width = img.naturalWidth;
+            if (canvas.height !== img.naturalHeight) canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        }
+      } catch(e) {}
+      _frameBusy = false;
+    }, 100); // 10 fps — smooth enough for admin preview
+  }
+  function stopFrameLoop() {
+    if (_frameLoop) { clearInterval(_frameLoop); _frameLoop = null; }
+    _frameBusy = false;
+    const canvas = document.getElementById('cam-feed');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  let _pollTimer = null;
+  const _shownInEstado = new Set();
+  let _camType = 'entrada';
+
+  async function toggleCamType() {
+    _camType = _camType === 'entrada' ? 'salida' : 'entrada';
+    const btn = document.getElementById('cam-type-btn');
+    if (_camType === 'entrada') {
+      btn.textContent = '🟢 ENTRADA';
+      btn.style.borderColor = '#2ea043';
+      btn.style.background  = '#0d2b14';
+      btn.style.color       = '#2ea043';
+    } else {
+      btn.textContent = '🔴 SALIDA';
+      btn.style.borderColor = '#e05252';
+      btn.style.background  = '#2b0d0d';
+      btn.style.color       = '#e05252';
+    }
+    // sync to server immediately (even if stream already running)
+    await fetch('/api/set-cam-type', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cam_type: _camType})
+    });
+    // clear pantalla shown-events so it re-evaluates with new type
+    _shownInEstado.clear();
+  }
+
+  async function pollStatus() {
+    try {
+      const d = await fetch('/status').then(r=>r.json());
+      document.getElementById('cam-dot').className = 'dot' + (d.running ? ' on' : '');
+      document.getElementById('cam-status').textContent =
+        d.running ? (d.error || 'En vivo') : (d.error || 'Detenida');
+      document.getElementById('cam-fps').textContent = d.running ? `${d.fps} fps` : '';
+      document.getElementById('btn-start').style.display = d.running ? 'none' : '';
+      document.getElementById('btn-stop').style.display  = d.running ? '' : 'none';
+      if (d.current) {
+        const box = document.getElementById('det-info');
+        const pid = String(d.current.person_id);
+        if (!_shownInEstado.has(pid)) {
+          _shownInEstado.add(pid);
+          const t = d.current.timestamp.slice(11,16);
+          const entry = `<div style="padding:4px 0;border-bottom:1px solid #21262d">
+            ✅ <strong style="color:var(--fg)">${d.current.name}</strong>
+            ${d.current.role ? `<span style="color:var(--fg-muted)"> · ${d.current.role}</span>` : ''}
+            <span style="color:var(--accent);float:right">${t}</span>
+          </div>`;
+          box.insertAdjacentHTML('afterbegin', entry);
+          while (box.children.length > 3) box.removeChild(box.lastChild);
+        }
+      }
+      // keep polling only while camera tab visible AND camera running
+      if (d.running && document.getElementById('tab-camera').style.display !== 'none') {
+        _pollTimer = setTimeout(pollStatus, 3000);
+      } else {
+        _pollTimer = null;
+      }
+    } catch(e){
+      _pollTimer = null;
+    }
+  }
+
+  function startPolling() {
+    if (!_pollTimer) pollStatus();
+  }
+
+  // ── PERSONS ────────────────────────────────────────────────────────────────
+  async function loadPersons() {
+    const rows = await fetch('/api/persons').then(r=>r.json()).catch(()=>[]);
+    const tb = document.querySelector('#persons-tbody');
+    tb.innerHTML = rows.map(p => `<tr style="${p.blocked?'opacity:.45':''}">
+      <td>${p.face_path
+        ? `<img src="/uploads/faces/${encodeURIComponent(p.face_path)}" onerror="this.style.opacity='.2'">`
+        : '<div style="width:40px;height:40px;border-radius:50%;background:#1a2535;display:flex;align-items:center;justify-content:center;font-size:20px">👤</div>'}</td>
+      <td><strong>${p.name}</strong>${p.blocked ? ' <span style="font-size:10px;color:var(--red);font-weight:700">BLOQUEADO</span>':''}</td>
+      <td style="color:var(--fg-muted)">${p.role||'—'}</td>
+      <td>${p.face_path ? '<span style="color:var(--green);font-size:11px">✓ OK</span>' : '<span style="color:var(--red);font-size:11px">Sin foto</span>'}</td>
+      <td><button class="btn" onclick="openEditPerson(${p.id})">✏️ Editar</button></td>
+    </tr>`).join('');
+  }
+
+  let _detectedBoxes   = [];   // all boxes from last detection
+  let _selectedFaceIdx = null; // index chosen by user (or 0 if only 1)
+
+  function selectFace(idx) {
+    _selectedFaceIdx = idx;
+    const img    = document.getElementById('face-preview-img');
+    const canvas = document.getElementById('face-preview-canvas');
+    const ctx    = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const sx = img.offsetWidth  / _detectedBoxes[0].imgW;
+    const sy = img.offsetHeight / _detectedBoxes[0].imgH;
+    _detectedBoxes.forEach((b, i) => {
+      const selected = i === idx;
+      ctx.strokeStyle = selected ? '#63b3ed' : '#ffffff33';
+      ctx.lineWidth   = selected ? 3 : 1;
+      ctx.strokeRect(b.x*sx, b.y*sy, b.w*sx, b.h*sy);
+      ctx.fillStyle   = selected ? '#63b3ed33' : '#00000022';
+      ctx.fillRect(b.x*sx, b.y*sy, b.w*sx, b.h*sy);
+    });
+    // update thumbs highlight
+    document.querySelectorAll('.face-thumb').forEach((el, i) => {
+      el.style.borderColor = i === idx ? '#63b3ed' : 'transparent';
+      el.style.opacity     = i === idx ? '1' : '0.45';
+    });
+    const status = document.getElementById('face-preview-status');
+    status.textContent = `✅ Cara ${idx+1} seleccionada`;
+    status.style.color = 'var(--green)';
+    document.getElementById('btn-add-person').disabled = false;
+  }
+
+  async function previewFace(input) {
+    _detectedBoxes   = [];
+    _selectedFaceIdx = null;
+    document.getElementById('btn-add-person').disabled = true;
+    const file = input.files[0];
+    if (!file) return;
+    const wrap   = document.getElementById('face-preview-wrap');
+    const img    = document.getElementById('face-preview-img');
+    const status = document.getElementById('face-preview-status');
+    img.src = URL.createObjectURL(file);
+    wrap.style.display = 'block';
+    status.textContent = '🔍 Detectando...';
+    status.style.color = 'var(--fg-muted)';
+    document.getElementById('face-thumbs').innerHTML = '';
+    img.onload = async () => {
+      const canvas = document.getElementById('face-preview-canvas');
+      canvas.width  = img.offsetWidth;
+      canvas.height = img.offsetHeight;
+      const form = new FormData();
+      form.append('face', file);
+      try {
+        const d = await fetch('/api/detect-face-box', {method:'POST', body:form}).then(r=>r.json());
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!d.boxes || !d.boxes.length) {
+          status.textContent = '⚠️ No se detectó cara — usa foto frontal con buena luz';
+          status.style.color = 'var(--red)';
+          return;
+        }
+        _detectedBoxes = d.boxes;
+        if (d.boxes.length === 1) {
+          // auto-select
+          selectFace(0);
+        } else {
+          // show all boxes dimmed, build thumb selector
+          const sx = img.offsetWidth  / d.boxes[0].imgW;
+          const sy = img.offsetHeight / d.boxes[0].imgH;
+          d.boxes.forEach((b, i) => {
+            ctx.strokeStyle = '#ffffff44'; ctx.lineWidth = 1;
+            ctx.strokeRect(b.x*sx, b.y*sy, b.w*sx, b.h*sy);
+          });
+          status.textContent = `${d.boxes.length} caras detectadas — selecciona cuál registrar:`;
+          status.style.color = '#f6a623';
+          // build thumbnail strip using offscreen canvas crops
+          const thumbStrip = document.getElementById('face-thumbs');
+          const offImg = new Image();
+          offImg.src = img.src;
+          offImg.onload = () => {
+            d.boxes.forEach((b, i) => {
+              const tc = document.createElement('canvas');
+              tc.width = 60; tc.height = 60;
+              const tctx = tc.getContext('2d');
+              tctx.drawImage(offImg, b.x, b.y, b.w, b.h, 0, 0, 60, 60);
+              tc.className = 'face-thumb';
+              tc.style.cssText = 'border-radius:8px;cursor:pointer;border:2px solid transparent;opacity:.45;transition:all .15s';
+              tc.title = `Cara ${i+1}`;
+              tc.onclick = () => selectFace(i);
+              thumbStrip.appendChild(tc);
+            });
+          };
+        }
+      } catch(e) {
+        status.textContent = '(preview sin detección)';
+        document.getElementById('btn-add-person').disabled = false;
+      }
+    };
+  }
+
+  async function addPerson() {
+    const name = document.getElementById('p-name').value.trim();
+    const role = document.getElementById('p-role').value.trim();
+    const face = document.getElementById('p-face').files[0];
+    if (!name) { showMsg('p-msg-err','Ingresa el nombre'); return; }
+    if (face && _detectedBoxes.length > 1 && _selectedFaceIdx === null) {
+      showMsg('p-msg-err','Selecciona cuál cara registrar'); return;
+    }
+    if (face && _detectedBoxes.length === 0) {
+      showMsg('p-msg-err','No se detectó cara en la foto — sube otra imagen'); return;
+    }
+    const form = new FormData();
+    form.append('name', name);
+    form.append('role', role);
+    if (face) {
+      form.append('face', face);
+      if (_selectedFaceIdx !== null && _detectedBoxes[_selectedFaceIdx]) {
+        const b = _detectedBoxes[_selectedFaceIdx];
+        form.append('face_bbox', JSON.stringify(b));
+      }
+    }
+    const r = await fetch('/api/persons', {method:'POST', body:form});
+    const d = await r.json();
+    if (d.ok) {
+      showMsg('p-msg-ok', d.has_embedding ? '✓ Registrado con reconocimiento facial' : '✓ Registrado (sin embedding — sube foto)');
+      document.getElementById('p-name').value = '';
+      document.getElementById('p-role').value = '';
+      document.getElementById('p-face').value = '';
+      document.getElementById('face-preview-wrap').style.display = 'none';
+      _detectedBoxes = []; _selectedFaceIdx = null;
+      document.getElementById('btn-add-person').disabled = false;
+      loadPersons();
+    } else showMsg('p-msg-err', d.error || 'Error');
+  }
+
+  async function delPerson(id) {
+    if (!confirm('¿Eliminar persona y su historial de asistencia?')) return;
+    await fetch('/api/persons/'+id, {method:'DELETE'});
+    loadPersons();
+  }
+
+  // ── ATTENDANCE & HISTORY ───────────────────────────────────────────────────
+  let _histPersonsCache = [];
+
+  function renderPersonCards(persons, gridId) {
+    const grid = document.getElementById(gridId);
+    if (!persons.length) {
+      grid.innerHTML = '<div style="color:var(--fg-muted);font-size:13px;padding:20px">Sin registros para esta fecha.</div>';
+      return;
+    }
+    grid.innerHTML = persons.map(p => {
+      const first = p.accesses[0];
+      const last  = p.accesses[p.accesses.length - 1];
+      const t = first ? new Date(first.timestamp).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '—';
+      const inside  = last && last.type === 'entrada';
+      const statusIcon  = inside ? '🟢' : '🔴';
+      const statusLabel = inside ? 'Adentro' : 'Afuera';
+      const statusColor = inside ? '#2ea043' : '#e05252';
+      return `<div class="att-card" style="cursor:pointer" onclick='openModal(${JSON.stringify(p)}, "${gridId==='att-persons-hist' ? (document.getElementById('hist-date').value||'') : new Date().toISOString().slice(0,10)}")'>
+        ${p.face_path
+          ? `<img src="/uploads/faces/${encodeURIComponent(p.face_path)}">`
+          : `<div class="avatar-ph">👤</div>`}
+        <div class="info">
+          <div style="display:flex;align-items:center;gap:6px">
+            <strong>${p.name}</strong>
+            <span style="font-size:11px;font-weight:700;color:${statusColor};background:${statusColor}22;
+                         padding:1px 7px;border-radius:20px;white-space:nowrap">${statusIcon} ${statusLabel}</span>
+          </div>
+          <small>${p.role||''}</small>
+          <div class="time">${t} · ${p.accesses.length} acceso${p.accesses.length!==1?'s':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadCurrentlyInside() {
+    const rows = await fetch('/api/attendance/currently-inside').then(r=>r.json()).catch(()=>[]);
+    const grid = document.getElementById('inside-grid');
+    document.getElementById('inside-count').textContent = rows.length;
+    if (!rows.length) {
+      grid.innerHTML = '<div style="color:var(--fg-muted);font-size:13px;padding:8px 0">Nadie adentro actualmente.</div>';
+      return;
+    }
+    grid.innerHTML = rows.map(p => `
+      <div class="att-card" style="cursor:pointer" onclick="openInsidePerson(${p.id}, '${p.last_ts.slice(0,10)}')">
+        ${p.face_path
+          ? `<img src="/uploads/faces/${encodeURIComponent(p.face_path)}">`
+          : `<div class="avatar-ph">👤</div>`}
+        <div class="info">
+          <strong>${p.name}</strong>
+          <small>${p.role||''}</small>
+          <div class="time">Desde ${p.last_ts.slice(0,16).replace('T',' ')}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  async function loadAttendanceByPerson(mode) {
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('att-today-date').textContent = today;
+    const [persons, summary] = await Promise.all([
+      fetch('/api/attendance/by-person?date='+today).then(r=>r.json()).catch(()=>[]),
+      fetch('/api/attendance/today-summary').then(r=>r.json()).catch(()=>({}))
+    ]);
+    document.getElementById('att-summary-today').innerHTML = `
+      <div class="badge"><div class="num">${summary.present||0}</div><div class="lbl">Presentes hoy</div></div>
+      <div class="badge"><div class="num">${summary.total||0}</div><div class="lbl">Registrados</div></div>`;
+    renderPersonCards(persons, 'att-persons-today');
+    loadCurrentlyInside();
+  }
+
+  async function loadHistoryByPerson() {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    const date = document.getElementById('hist-date').value || yesterday.toISOString().slice(0,10);
+    document.getElementById('hist-date').value = date;
+    const [persons, summary] = await Promise.all([
+      fetch('/api/attendance/by-person?date='+date).then(r=>r.json()).catch(()=>[]),
+      fetch('/api/attendance/today-summary').then(r=>r.json()).catch(()=>({}))
+    ]);
+    _histPersonsCache = persons;
+    document.getElementById('att-summary-hist').innerHTML = `
+      <div class="badge"><div class="num">${persons.length}</div><div class="lbl">Personas ese día</div></div>`;
+    filterHistPersons();
+  }
+
+  function filterHistPersons() {
+    const q = document.getElementById('hist-search').value.trim().toLowerCase();
+    const filtered = q ? _histPersonsCache.filter(p => p.name.toLowerCase().includes(q) || (p.role||'').toLowerCase().includes(q)) : _histPersonsCache;
+    renderPersonCards(filtered, 'att-persons-hist');
+  }
+
+  // ── MODAL ──────────────────────────────────────────────────────────────────
+  let _modalPersonId = null;
+  let _modalDate     = null;
+
+  async function openInsidePerson(pid, date) {
+    const persons = await fetch('/api/attendance/by-person?date='+date).then(r=>r.json()).catch(()=>[]);
+    const p = persons.find(x => x.id === pid);
+    if (p) openModal(p, date);
+  }
+
+  async function manualAccess(type) {
+    if (!_modalPersonId) return;
+    await fetch('/api/attendance/manual', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({person_id: _modalPersonId, type, timestamp: new Date().toISOString().slice(0,19).replace('T',' ')})
+    });
+    closeModal();
+    // always refresh inside panel
+    await loadCurrentlyInside();
+    // refresh today grid
+    const today = new Date().toISOString().slice(0,10);
+    if (_modalDate === today) loadAttendanceByPerson('today');
+    else loadHistoryByPerson();
+  }
+
+  function calcTotalInside(accesses) {
+    let totalMs = 0;
+    let entradaTime = null;
+    for (const a of accesses) {
+      const t = new Date(a.timestamp).getTime();
+      if (a.type === 'entrada') {
+        entradaTime = t;
+      } else if (a.type === 'salida' && entradaTime !== null) {
+        totalMs += t - entradaTime;
+        entradaTime = null;
+      }
+    }
+    // still inside (entrada sin salida)
+    if (entradaTime !== null) totalMs += Date.now() - entradaTime;
+    if (totalMs <= 0) return null;
+    const totalMin = Math.floor(totalMs / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  function openModal(person, date) {
+    _modalPersonId = person.id;
+    _modalDate     = date || new Date().toISOString().slice(0,10);
+    document.getElementById('modal-name').textContent = person.name;
+    document.getElementById('modal-role').textContent = person.role || '';
+    const photo = document.getElementById('modal-photo');
+    const avatar = document.getElementById('modal-avatar');
+    if (person.face_path) {
+      photo.src = '/uploads/faces/' + encodeURIComponent(person.face_path);
+      photo.style.display = 'block'; avatar.style.display = 'none';
+    } else {
+      photo.style.display = 'none'; avatar.style.display = 'flex';
+    }
+    // tiempo total dentro
+    const totalTime = calcTotalInside(person.accesses);
+    const timeEl = document.getElementById('modal-total-time');
+    if (totalTime) {
+      timeEl.style.display = 'flex';
+      document.getElementById('modal-time-value').textContent = totalTime;
+    } else {
+      timeEl.style.display = 'none';
+    }
+    document.getElementById('modal-accesses').innerHTML = person.accesses.length
+      ? person.accesses.map(a => {
+          const dt = new Date(a.timestamp);
+          const t = dt.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+          const icon = a.type === 'salida' ? '🚪' : '✅';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:18px">${icon}</span>
+            <div>
+              <div style="font-size:13px;font-weight:600">${a.type==='salida'?'Salida':'Entrada'}</div>
+              <div style="font-size:12px;color:var(--accent)">${t}</div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div style="color:var(--fg-muted);font-size:13px">Sin registros</div>';
+    const modal = document.getElementById('access-modal');
+    modal.style.display = 'flex';
+    modal.onclick = e => { if (e.target===modal) closeModal(); };
+  }
+
+  function closeModal() {
+    document.getElementById('access-modal').style.display = 'none';
+  }
+
+  // ── EDIT PERSON MODAL ──────────────────────────────────────────────────────
+  let _editPersonId   = null;
+  let _epBoxes        = [];   // detected face boxes for edit modal
+  let _epSelectedIdx  = null; // chosen face index
+
+  async function openEditPerson(id) {
+    _editPersonId = id;
+    const rows = await fetch('/api/persons').then(r=>r.json()).catch(()=>[]);
+    const p = rows.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('ep-name').value  = p.name  || '';
+    document.getElementById('ep-role').value  = p.role  || '';
+    document.getElementById('ep-id').textContent = '#' + p.id;
+    const blockBtn = document.getElementById('ep-block-btn');
+    blockBtn.textContent = p.blocked ? '🔓 Desbloquear acceso' : '🚫 Negar acceso';
+    blockBtn.className   = p.blocked ? 'btn btn-primary' : 'btn btn-danger';
+    const preview = document.getElementById('ep-photo-preview');
+    const nophoto = document.getElementById('ep-no-photo');
+    preview.src   = p.face_path ? '/uploads/faces/' + encodeURIComponent(p.face_path) : '';
+    preview.style.display = p.face_path ? 'block' : 'none';
+    nophoto.style.display = p.face_path ? 'none' : 'flex';
+    document.getElementById('ep-new-photo').value = '';
+    _epBoxes = []; _epSelectedIdx = null;
+    document.getElementById('ep-face-wrap').style.display = 'none';
+    document.getElementById('ep-face-thumbs').innerHTML = '';
+    document.getElementById('ep-face-status').textContent = '';
+    const modal = document.getElementById('edit-person-modal');
+    modal.style.display = 'flex';
+    modal.onclick = e => { if (e.target === modal) closeEditPerson(); };
+  }
+
+  function closeEditPerson() {
+    document.getElementById('edit-person-modal').style.display = 'none';
+    _editPersonId = null;
+  }
+
+  async function saveEditPerson() {
+    if (!_editPersonId) return;
+    const name  = document.getElementById('ep-name').value.trim();
+    const role  = document.getElementById('ep-role').value.trim();
+    const file  = document.getElementById('ep-new-photo').files[0];
+    if (!name) { alert('Nombre requerido'); return; }
+    if (file && _epBoxes.length > 1 && _epSelectedIdx === null) {
+      alert('Selecciona cuál cara usar'); return;
+    }
+    if (file && _epBoxes.length === 0) {
+      alert('No se detectó cara — sube otra imagen'); return;
+    }
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('role', role);
+    if (file) {
+      fd.append('face', file);
+      if (_epSelectedIdx !== null && _epBoxes[_epSelectedIdx]) {
+        fd.append('face_bbox', JSON.stringify(_epBoxes[_epSelectedIdx]));
+      }
+    }
+    await fetch('/api/persons/' + _editPersonId, {method: 'PUT', body: fd});
+    closeEditPerson();
+    loadPersons();
+  }
+
+  async function toggleBlockPerson() {
+    if (!_editPersonId) return;
+    const rows = await fetch('/api/persons').then(r=>r.json()).catch(()=>[]);
+    const p = rows.find(x => x.id === _editPersonId);
+    if (!p) return;
+    await fetch('/api/persons/' + _editPersonId + '/block', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({blocked: !p.blocked})
+    });
+    closeEditPerson();
+    loadPersons();
+  }
+
+  async function confirmDeletePerson() {
+    if (!_editPersonId) return;
+    if (!confirm('¿Eliminar persona y todo su historial? Esta acción no se puede deshacer.')) return;
+    await fetch('/api/persons/' + _editPersonId, {method:'DELETE'});
+    closeEditPerson();
+    loadPersons();
+  }
+
+  function selectEditFace(idx) {
+    _epSelectedIdx = idx;
+    const img    = document.getElementById('ep-face-img');
+    const canvas = document.getElementById('ep-face-canvas');
+    const ctx    = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const sx = img.offsetWidth  / (_epBoxes[0]?.imgW || 1);
+    const sy = img.offsetHeight / (_epBoxes[0]?.imgH || 1);
+    _epBoxes.forEach((b, i) => {
+      const sel = i === idx;
+      ctx.strokeStyle = sel ? '#63b3ed' : '#ffffff33';
+      ctx.lineWidth   = sel ? 3 : 1;
+      ctx.strokeRect(b.x*sx, b.y*sy, b.w*sx, b.h*sy);
+      if (sel) {
+        ctx.fillStyle = '#63b3ed22';
+        ctx.fillRect(b.x*sx, b.y*sy, b.w*sx, b.h*sy);
+      }
+    });
+    // highlight thumbs
+    document.querySelectorAll('#ep-face-thumbs canvas').forEach((tc, i) => {
+      tc.style.opacity = i === idx ? '1' : '.4';
+      tc.style.borderColor = i === idx ? '#63b3ed' : 'transparent';
+    });
+    document.getElementById('ep-face-status').textContent =
+      _epBoxes.length === 1 ? '✅ Cara detectada' : `Cara ${idx+1} seleccionada`;
+    document.getElementById('ep-face-status').style.color =
+      _epBoxes.length === 1 ? 'var(--green)' : '#63b3ed';
+  }
+
+  async function previewEditFace(input) {
+    _epBoxes = []; _epSelectedIdx = null;
+    const file = input.files[0];
+    if (!file) return;
+    const wrap   = document.getElementById('ep-face-wrap');
+    const img    = document.getElementById('ep-face-img');
+    const status = document.getElementById('ep-face-status');
+    const canvas = document.getElementById('ep-face-canvas');
+    const thumbs = document.getElementById('ep-face-thumbs');
+    // hide current photo preview, show detection wrap
+    document.getElementById('ep-photo-preview').style.display = 'none';
+    document.getElementById('ep-no-photo').style.display      = 'none';
+    img.src = URL.createObjectURL(file);
+    wrap.style.display = 'flex';
+    thumbs.innerHTML = '';
+    status.textContent = '🔍 Detectando...';
+    status.style.color = 'var(--fg-muted)';
+    img.onload = async () => {
+      canvas.width  = img.offsetWidth;
+      canvas.height = img.offsetHeight;
+      const form = new FormData();
+      form.append('face', file);
+      try {
+        const d = await fetch('/api/detect-face-box', {method:'POST', body:form}).then(r=>r.json());
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!d.boxes || !d.boxes.length) {
+          status.textContent = '⚠️ No se detectó cara — usa foto frontal con buena luz';
+          status.style.color = 'var(--red)';
+          _epBoxes = [];
+          return;
+        }
+        _epBoxes = d.boxes;
+        if (d.boxes.length === 1) {
+          selectEditFace(0);
+        } else {
+          const sx = img.offsetWidth  / d.boxes[0].imgW;
+          const sy = img.offsetHeight / d.boxes[0].imgH;
+          d.boxes.forEach((b, i) => {
+            ctx.strokeStyle = '#ffffff44'; ctx.lineWidth = 1;
+            ctx.strokeRect(b.x*sx, b.y*sy, b.w*sx, b.h*sy);
+          });
+          status.textContent = `${d.boxes.length} caras — selecciona cuál registrar:`;
+          status.style.color = '#f6a623';
+          const offImg = new Image();
+          offImg.src = img.src;
+          offImg.onload = () => {
+            d.boxes.forEach((b, i) => {
+              const tc = document.createElement('canvas');
+              tc.width = 56; tc.height = 56;
+              tc.getContext('2d').drawImage(offImg, b.x, b.y, b.w, b.h, 0, 0, 56, 56);
+              tc.style.cssText = 'border-radius:6px;cursor:pointer;border:2px solid transparent;opacity:.4;transition:all .15s';
+              tc.onclick = () => selectEditFace(i);
+              thumbs.appendChild(tc);
+            });
+          };
+        }
+      } catch(e) {
+        status.textContent = '(sin detección)';
+        _epBoxes = [];
+      }
+    };
+  }
+</script>
+
+<!-- Edit Person Modal -->
+<div id="edit-person-modal" style="display:none;position:fixed;inset:0;background:#0009;z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:420px;max-width:95vw;padding:28px 28px 24px;position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <div style="font-weight:700;font-size:17px">Gestionar persona</div>
+        <div id="ep-id" style="color:var(--fg-muted);font-size:12px"></div>
+      </div>
+      <button onclick="closeEditPerson()" style="background:none;border:none;color:var(--fg-muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+    </div>
+
+    <div style="display:flex;gap:16px;margin-bottom:18px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px">Nombre</label>
+          <input id="ep-name" class="inp" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px">Puesto / Rol</label>
+          <input id="ep-role" class="inp" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px">Nueva foto (opcional)</label>
+          <input id="ep-new-photo" type="file" accept="image/*" class="inp" style="width:100%;padding:5px" onchange="previewEditFace(this)">
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="position:relative;width:90px;height:90px">
+          <img id="ep-photo-preview" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:2px solid var(--border);display:none">
+          <div style="width:90px;height:90px;border-radius:50%;background:#1a2535;display:flex;align-items:center;justify-content:center;font-size:36px;opacity:.4" id="ep-no-photo">👤</div>
+        </div>
+        <div id="ep-face-wrap" style="display:none;flex-direction:column;align-items:center;gap:4px">
+          <div style="position:relative;width:fit-content">
+            <img id="ep-face-img" style="max-width:180px;max-height:130px;border-radius:6px;display:block">
+            <canvas id="ep-face-canvas" style="position:absolute;inset:0;pointer-events:none"></canvas>
+          </div>
+          <div id="ep-face-status" style="font-size:11px;color:var(--fg-muted);text-align:center;max-width:180px"></div>
+          <div id="ep-face-thumbs" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" onclick="saveEditPerson()" style="width:100%">💾 Guardar cambios</button>
+      <button id="ep-block-btn" class="btn btn-danger" onclick="toggleBlockPerson()" style="width:100%">🚫 Negar acceso</button>
+      <button class="btn btn-danger" onclick="confirmDeletePerson()" style="width:100%;opacity:.7">🗑️ Eliminar registro permanentemente</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

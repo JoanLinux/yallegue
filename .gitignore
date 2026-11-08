@@ -1,0 +1,8 @@
+yallegue.db
+uploads/faces/*
+__pycache__/
+*.pyc
+*.pt
+*.onnx
+*.h5
+uploads/videos/*
